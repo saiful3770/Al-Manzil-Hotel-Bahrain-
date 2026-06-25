@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance + Inventory Tracker</title>
+
+<style>
+:root {
+    --primary:#1e2a3a;
+    --secondary:#1abc9c;
+    --danger:#e74c3c;
+    --light:#f0f4f8;
+    --border:#dce4ec;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Segoe UI, sans-serif;
+}
+
+body{
+    background:#eef2f5;
+    padding:15px;
+}
+
+.app-container{
+    max-width:1200px;
+    margin:auto;
+    background:#fff;
+    border-radius:12px;
+    overflow:hidden;
+}
+
+header{
+    background:var(--primary);
+    color:#fff;
+    padding:15px;
+    text-align:center;
+}
+
+.top-actions{
+    display:flex;
+    gap:10px;
+    padding:10px 15px;
+    flex-wrap:wrap;
+}
+
+.top-actions button{
+    flex:1;
+    padding:10px;
+    border:none;
+    border-radius:6px;
+    color:#fff;
+    cursor:pointer;
+    font-weight:bold;
+    min-width:100px;
+}
+
+.excel-btn{ background:#2ecc71; }
+.share-btn{ background:#3498db; }
+.print-btn{ background:#9b59b6; }
+
+.date-filter{
+    display:flex;
+    gap:10px;
+    padding:0 15px 10px 15px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+.date-filter label{
+    font-weight:bold;
+    color:var(--primary);
+}
+
+.date-filter input[type="date"]{
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:6px;
+}
+
+.date-filter button{
+    background:var(--secondary);
+    color:#fff;
+    border:none;
+    padding:8px 20px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.dashboard{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    padding:15px;
+}
+
+.card{
+    background:#fff;
+    padding:12px;
+    border-radius:10px;
+    text-align:center;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.card h2{margin:0;}
+
+.total{border-left:4px solid #3498db;}
+.pending{border-left:4px solid #f39c12;}
+.progress{border-left:4px solid #9b59b6;}
+.done{border-left:4px solid #2ecc71;}
+
+.main{
+    padding:15px;
+}
+
+.form-card{
+    background:var(--light);
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:10px;
+}
+
+input,select{
+    padding:10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+}
+
+.material-box{
+    display:flex;
+    gap:8px;
+    margin-top:5px;
+    flex-wrap:wrap;
+}
+
+.material-box input[type="text"]{
+    flex:2;
+    min-width:120px;
+}
+
+.material-box input[type="number"]{
+    flex:1;
+    min-width:80px;
+}
+
+.material-box button{
+    background:#1abc9c;
+    color:#fff;
+    border:none;
+    padding:10px 20px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.manage-materials{
+    margin-top:15px;
+    padding:10px;
+    background:#fff;
+    border-radius:8px;
+    border:1px solid var(--border);
+}
+
+.manage-materials h4{
+    margin-bottom:8px;
+    color:var(--primary);
+}
+
+.material-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:6px 10px;
+    border-bottom:1px solid #eee;
+}
+
+.material-item:last-child{
+    border-bottom:none;
+}
+
+.material-item .name{
+    font-weight:500;
+}
+
+.material-item .actions button{
+    border:none;
+    background:none;
+    cursor:pointer;
+    padding:0 5px;
+    font-size:16px;
+}
+
+.material-item .actions .edit-btn{color:#3498db;}
+.material-item .actions .del-btn{color:#e74c3c;}
+
+.table-card{
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:900px;
+}
+
+th{
+    background:var(--primary);
+    color:#fff;
+    padding:10px;
+}
+
+td{
+    padding:10px;
+    border-bottom:1px solid #ddd;
+}
+
+.balance{
+    background:#e8f0fe;
+    font-weight:bold;
+    text-align:center;
+}
+
+.btn{
+    border:none;
+    background:none;
+    cursor:pointer;
+    color:blue;
+}
+
+.del{
+    color:red;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app-container">
+
+<header>🛠️ Maintenance Tracker + Dashboard</header>
+
+<div class="top-actions">
+    <button class="excel-btn" onclick="exportExcel()">📊 Excel</button>
+    <button class="share-btn" onclick="shareExcel()">📤 Share</button>
+    <button class="print-btn" onclick="printTable()">🖨️ Print</button>
+</div>
+
+<div class="date-filter">
+    <label for="filterDate">📅 Filter by Date:</label>
+    <input type="date" id="filterDate">
+    <button onclick="applyFilter()">Show</button>
+    <button onclick="clearFilter()" style="background:#e74c3c;">Clear</button>
+</div>
+
+<div class="dashboard">
+    <div class="card total">
+        <h2 id="totalCount">0</h2>
+        <span>Total</span>
+    </div>
+    <div class="card pending">
+        <h2 id="pendingCount">0</h2>
+        <span>Pending</span>
+    </div>
+    <div class="card progress">
+        <h2 id="progressCount">0</h2>
+        <span>In Progress</span>
+    </div>
+    <div class="card done">
+        <h2 id="doneCount">0</h2>
+        <span>Done</span>
+    </div>
+</div>
+
+<div class="main">
+
+<div class="form-card">
+<form id="form">
+
+<div class="form-grid">
+
+<input id="roomNo" placeholder="Room No">
+<input id="task" placeholder="Task">
+
+<div>
+    <select id="material">
+        <option value="">— Select Material —</option>
+    </select>
+
+    <div class="material-box">
+        <input id="newMaterial" placeholder="Add New Material">
+        <input type="number" id="newTotal" placeholder="Total Qty">
+        <button type="button" onclick="addMaterial()">Add</button>
+    </div>
+</div>
+
+<input type="number" id="total" placeholder="Total (auto)">
+<input type="number" id="used" placeholder="Used">
+
+<select id="status">
+<option>Pending</option>
+<option>In Progress</option>
+<option>Done</option>
+</select>
+
+<input type="date" id="due" placeholder="Due Date">
+
+<input id="remarks" placeholder="Remarks">
+
+</div>
+
+<button style="margin-top:10px;width:100%;padding:12px;background:#1abc9c;color:#fff;border:none;border-radius:6px;">
+Save
+</button>
+
+</form>
+</div>
+
+<div class="manage-materials">
+    <h4>📦 Manage Materials</h4>
+    <div id="materialListContainer"></div>
+</div>
+
+<div class="table-card">
+<table>
+<thead>
+<tr>
+<th>Room</th>
+<th>Task</th>
+<th>Material</th>
+<th>Total</th>
+<th>Used</th>
+<th>Balance</th>
+<th>Status</th>
+<th>Due</th>
+<th>Remarks</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="body"></tbody>
+</table>
+</div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCgoSp9MlJfg6aIAfmoc02TF6bcSAzwYAM",
+    authDomain: "maintenance-inv.firebaseapp.com",
+    databaseURL: "https://maintenance-inv-default-rtdb.firebaseio.com",
+    projectId: "maintenance-inv",
+    storageBucket: "maintenance-inv.firebasestorage.app",
+    messagingSenderId: "292298087058",
+    appId: "1:292298087058:web:fbfbb736ba4648296da44b"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+window.db = {};
+window.editingKey = null;
+window.filterDate = null;
+window.materials = [];
+
+const defaultMaterials = ["Capacitor 45uF", "Capacitor 60uF", "Compressor", "Fan Motor", "Relay", "MCB", "Fuse", "LED Bulb"];
+
+const materialSelect = document.getElementById("material");
+const newMaterial = document.getElementById("newMaterial");
+const newTotal = document.getElementById("newTotal");
+const status = document.getElementById("status");
+const roomNo = document.getElementById("roomNo");
+const task = document.getElementById("task");
+const total = document.getElementById("total");
+const used = document.getElementById("used");
+const due = document.getElementById("due");
+const remarks = document.getElementById("remarks");
+const body = document.getElementById("body");
+const filterDateInput = document.getElementById("filterDate");
+const form = document.getElementById("form");
+
+onValue(ref(database, 'materials'), (snapshot) => {
+    if(snapshot.exists()) { window.materials = snapshot.val(); } 
+    else { window.materials = defaultMaterials; set(ref(database, 'materials'), window.materials); }
+    window.renderMaterials();
+});
+
+onValue(ref(database, 'db'), (snapshot) => {
+    window.db = snapshot.exists() ? snapshot.val() : {};
+    window.render();
+});
+
+materialSelect.addEventListener("change", function() {
+    const selected = this.value.trim();
+    if (!selected) { total.value = 0; return; }
+    const entries = Object.keys(window.db).filter(key => window.db[key].material === selected).sort((a, b) => a - b);
+    if (entries.length === 0) { total.value = 0; return; }
+    const lastKey = entries[entries.length - 1];
+    total.value = window.db[lastKey].balance || 0;
+});
+
+window.renderMaterials = function(){
+    materialSelect.innerHTML = '<option value="">— Select Material —</option>';
+    window.materials.forEach(m=>{
+        let opt = document.createElement("option");
+        opt.value = m; opt.textContent = m;
+        materialSelect.appendChild(opt);
+    });
+    const container = document.getElementById("materialListContainer");
+    container.innerHTML = "";
+    window.materials.forEach((m, index) => {
+        const div = document.createElement("div");
+        div.className = "material-item";
+        div.innerHTML = `<span class="name">${m}</span><div class="actions"><button class="edit-btn" onclick="editMaterial(${index})" title="Edit">✏️</button><button class="del-btn" onclick="deleteMaterial(${index})" title="Delete">🗑️</button></div>`;
+        container.appendChild(div);
+    });
+}
+
+window.addMaterial = function(){
+    let name = newMaterial.value.trim();
+    let qty = parseInt(newTotal.value) || 0;
+    if(!name) return;
+    if(!window.materials.includes(name)){
+        window.materials.push(name);
+        set(ref(database, 'materials'), window.materials);
+        newMaterial.value = ""; newTotal.value = "";
+        materialSelect.value = name; total.value = qty;
+    } else { alert("Material already exists!"); }
+}
+
+window.editMaterial = function(index){
+    let oldName = window.materials[index];
+    let newName = prompt("Edit Material Name:", oldName);
+    if(newName && newName.trim() && newName.trim() !== oldName){
+        if(window.materials.includes(newName.trim())){ alert("This material already exists!"); return; }
+        window.materials[index] = newName.trim();
+        set(ref(database, 'materials'), window.materials);
+        Object.keys(window.db).forEach(key => {
+            if(window.db[key].material === oldName){ window.db[key].material = newName.trim(); set(ref(database, 'db/' + key), window.db[key]); }
+        });
+    }
+}
+
+window.deleteMaterial = function(index){
+    let name = window.materials[index];
+    if(Object.values(window.db).some(r => r.material === name)){
+        if(!confirm(`"${name}" is used in entries. Delete anyway?`)) return;
+        Object.keys(window.db).forEach(key => { if(window.db[key].material === name) remove(ref(database, 'db/' + key)); });
+    }
+    window.materials.splice(index, 1);
+    set(ref(database, 'materials'), window.materials);
+}
+
+window.applyFilter = function(){ window.filterDate = filterDateInput.value; window.render(); }
+window.clearFilter = function(){ window.filterDate = null; filterDateInput.value = ""; window.render(); }
+
+window.dashboard = function(filteredData){
+    let totalC=0, p=0, pr=0, d=0;
+    filteredData.forEach(r=>{
+        totalC++;
+        if(r.status==="Pending") p++;
+        else if(r.status==="In Progress") pr++;
+        else if(r.status==="Done") d++;
+    });
+    document.getElementById("totalCount").innerText=totalC;
+    document.getElementById("pendingCount").innerText=p;
+    document.getElementById("progressCount").innerText=pr;
+    document.getElementById("doneCount").innerText=d;
+}
+
+window.render = function(){
+    body.innerHTML="";
+    let entries = Object.keys(window.db);
+    
+    // শুধুমাত্র সিলেক্ট করা তারিখের ডাটা ফিল্টার করার লজিক
+    let filteredEntries = entries.filter(key => {
+        if (!window.filterDate) return true;
+        return window.db[key].due === window.filterDate;
+    });
+
+    filteredEntries.sort((a, b) => {
+        return (window.db[b].due || '').localeCompare(window.db[a].due || '') || b.localeCompare(a);
+    });
+
+    let filteredData = [];
+    filteredEntries.forEach(k=>{
+        let r=window.db[k];
+        filteredData.push(r);
+        body.innerHTML+=`
+        <tr>
+            <td>${r.room}</td><td>${r.task}</td><td>${r.material}</td>
+            <td>${r.total}</td><td>${r.used}</td><td class="balance">${r.balance}</td>
+            <td>${r.status}</td><td>${r.due || ''}</td><td>${r.remarks}</td>
+            <td><button class="btn" onclick="edit('${k}')">Edit</button><button class="btn del" onclick="del('${k}')">Del</button></td>
+        </tr>`;
+    });
+    window.dashboard(filteredData);
+}
+
+form.onsubmit = e => {
+    e.preventDefault();
+    let id = window.editingKey || Date.now().toString();
+    let entryData = {
+        room:roomNo.value, task:task.value, material:materialSelect.value,
+        total:+total.value, used:+used.value, balance:(+total.value - +used.value),
+        status:status.value, due:due.value, remarks:remarks.value || "-"
+    };
+    set(ref(database, 'db/' + id), entryData);
+    window.editingKey = null;
+    form.reset();
+    materialSelect.value = "";
+};
+
+window.edit = function(id){
+    let r = window.db[id];
+    window.editingKey = id;
+    roomNo.value = r.room; task.value = r.task;
+    materialSelect.value = r.material; total.value = r.total;
+    used.value = r.used; status.value = r.status;
+    due.value = r.due || ''; remarks.value = r.remarks;
+}
+
+window.del = function(id){ remove(ref(database, 'db/' + id)); }
+
+window.exportExcel = function(){
+    let data = Object.values(window.db).map(r=>({ Room:r.room, Task:r.task, Material:r.material, Total:r.total, Used:r.used, Balance:r.balance, Status:r.status, Due:r.due || '', Remarks:r.remarks }));
+    let ws = XLSX.utils.json_to_sheet(data);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+    XLSX.writeFile(wb, "maintenance_report.xlsx");
+}
+
+window.shareExcel = async function(){
+    try {
+        let data = Object.values(window.db).map(r=>({ Room:r.room, Task:r.task, Material:r.material, Total:r.total, Used:r.used, Balance:r.balance, Status:r.status, Due:r.due || '', Remarks:r.remarks }));
+        let ws = XLSX.utils.json_to_sheet(data);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Report");
+        let wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        let blob = new Blob([wbout], { type: 'application/octet-stream' });
+        if (navigator.canShare && navigator.canShare({ files: [new File([blob], "maintenance_report.xlsx", { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })] })) {
+            let file = new File([blob], "maintenance_report.xlsx", { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            await navigator.share({ title: 'Maintenance Report', files: [file] });
+        } else {
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "maintenance_report.xlsx";
+            link.click();
+        }
+    } catch (err) { if (err.name !== 'AbortError') { alert("Share failed: " + err.message); } }
+}
+
+window.printTable = function(){
+    let w = window.open("");
+    w.document.write("<h2>Maintenance Report</h2><table border='1' width='100%' cellpadding='5'><tr><th>Room</th><th>Task</th><th>Material</th><th>Total</th><th>Used</th><th>Balance</th><th>Status</th><th>Due</th><th>Remarks</th></tr>");
+    Object.values(window.db).forEach(r=>{
+        w.document.write(`<tr><td>${r.room}</td><td>${r.task}</td><td>${r.material}</td><td>${r.total}</td><td>${r.used}</td><td>${r.balance}</td><td>${r.status}</td><td>${r.due || ''}</td><td>${r.remarks}</td></tr>`);
+    });
+    w.document.write("</table>");
+    w.print();
+}
+</script>
+
+</body>
+</html>
