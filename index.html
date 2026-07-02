@@ -485,7 +485,6 @@ window.render = function(){
     body.innerHTML="";
     let entries = Object.keys(window.db);
     
-    // শুধুমাত্র সিলেক্ট করা তারিখের ডাটা ফিল্টার করার লজিক
     let filteredEntries = entries.filter(key => {
         if (!window.filterDate) return true;
         return window.db[key].due === window.filterDate;
@@ -536,39 +535,71 @@ window.edit = function(id){
 window.del = function(id){ remove(ref(database, 'db/' + id)); }
 
 window.exportExcel = function(){
-    let data = Object.values(window.db).map(r=>({ Room:r.room, Task:r.task, Material:r.material, Total:r.total, Used:r.used, Balance:r.balance, Status:r.status, Due:r.due || '', Remarks:r.remarks }));
+    let entries = Object.keys(window.db);
+    let filteredEntries = entries.filter(key => {
+        if (!window.filterDate) return true;
+        return window.db[key].due === window.filterDate;
+    });
+
+    let data = filteredEntries.map(k => {
+        let r = window.db[k];
+        return { Room:r.room, Task:r.task, Material:r.material, Total:r.total, Used:r.used, Balance:r.balance, Status:r.status, Due:r.due || '', Remarks:r.remarks };
+    });
+
     let ws = XLSX.utils.json_to_sheet(data);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Report");
-    XLSX.writeFile(wb, "maintenance_report.xlsx");
+    XLSX.writeFile(wb, "maintenance_report_" + (window.filterDate || "all") + ".xlsx");
 }
 
 window.shareExcel = async function(){
     try {
-        let data = Object.values(window.db).map(r=>({ Room:r.room, Task:r.task, Material:r.material, Total:r.total, Used:r.used, Balance:r.balance, Status:r.status, Due:r.due || '', Remarks:r.remarks }));
+        let entries = Object.keys(window.db);
+        let filteredEntries = entries.filter(key => {
+            if (!window.filterDate) return true;
+            return window.db[key].due === window.filterDate;
+        });
+
+        let data = filteredEntries.map(k => {
+            let r = window.db[k];
+            return { Room:r.room, Task:r.task, Material:r.material, Total:r.total, Used:r.used, Balance:r.balance, Status:r.status, Due:r.due || '', Remarks:r.remarks };
+        });
+
         let ws = XLSX.utils.json_to_sheet(data);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Report");
         let wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         let blob = new Blob([wbout], { type: 'application/octet-stream' });
-        if (navigator.canShare && navigator.canShare({ files: [new File([blob], "maintenance_report.xlsx", { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })] })) {
-            let file = new File([blob], "maintenance_report.xlsx", { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        let fileName = "maintenance_report_" + (window.filterDate || "all") + ".xlsx";
+        
+        if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })] })) {
+            let file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             await navigator.share({ title: 'Maintenance Report', files: [file] });
         } else {
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = "maintenance_report.xlsx";
+            link.download = fileName;
             link.click();
         }
     } catch (err) { if (err.name !== 'AbortError') { alert("Share failed: " + err.message); } }
 }
 
 window.printTable = function(){
+    let entries = Object.keys(window.db);
+    let filteredEntries = entries.filter(key => {
+        if (!window.filterDate) return true;
+        return window.db[key].due === window.filterDate;
+    });
+
     let w = window.open("");
-    w.document.write("<h2>Maintenance Report</h2><table border='1' width='100%' cellpadding='5'><tr><th>Room</th><th>Task</th><th>Material</th><th>Total</th><th>Used</th><th>Balance</th><th>Status</th><th>Due</th><th>Remarks</th></tr>");
-    Object.values(window.db).forEach(r=>{
+    w.document.write("<h2>Maintenance Report" + (window.filterDate ? " (" + window.filterDate + ")" : "") + "</h2><table border='1' width='100%' cellpadding='5'><tr><th>Room</th><th>Task</th><th>Material</th><th>Total</th><th>Used</th><th>Balance</th><th>Status</th><th>Due</th><th>Remarks</th></tr>");
+    
+    filteredEntries.forEach(k => {
+        let r = window.db[k];
         w.document.write(`<tr><td>${r.room}</td><td>${r.task}</td><td>${r.material}</td><td>${r.total}</td><td>${r.used}</td><td>${r.balance}</td><td>${r.status}</td><td>${r.due || ''}</td><td>${r.remarks}</td></tr>`);
     });
+    
     w.document.write("</table>");
     w.print();
 }
@@ -576,3 +607,4 @@ window.printTable = function(){
 
 </body>
 </html>
+
